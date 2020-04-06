@@ -120,7 +120,7 @@ int main()
     glUniform1f(id_scale_x, scale_x);
 
     // Nombre d'echantillons
-    int sample = 100;
+    int sample = 10;
 
     // Ajuster le nombre d'echantillons
     int input_ch;
@@ -232,7 +232,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 }
 
 float function_calc(float x, float y){
-    return 8 * exp((-(pow(x, 2) + pow(y, 2)) / 5));
+    return 8 * exp(-((pow(x, 2) + pow(y, 2)) / 5));
 }
 
 float Gradx(float x, float y, float delta) {
@@ -253,19 +253,43 @@ float Vey(float x, float y, float alpha, float delta) {
 
 void setNewDatas(int sample) {
 
-    int num_points = sample * sample;
+    int next_x;
+    int next_y;
+    float delta = 1 / 1000;
+    float alpha = M_PI / 4;
+
     Data data[sample][sample];
 
     for (int x = 0; x < sample ; x += 1) {
         for (int y = 0; y < sample; y += 1) {
-            float x_data = (x - 0.5 * (float)sample) / (0.1 * (float)sample);
-            float y_data = (y - 0.5 * (float)sample) / (0.1 * (float)sample);
-            float z_data = function_calc(x_data, y_data);
+            
+            next_x = x;
+            next_y = y;
+            
+            for (int i = 0; i < 5; i++) {
+                // Conversion de l'ensemble {0, sample} a l'ensemble {-5, 5}
+                float x_data = (next_x - 0.5 * (float)sample) / (0.1 * (float)sample);
+                float y_data = (next_y - 0.5 * (float)sample) / (0.1 * (float)sample);
+                //float z_data = function_calc(x_data, y_data);
 
-            //std::cout << "x_data : " << z_data << " | x_data_bis : " << z_data_bis << std::endl;
-            data[x][y].x = x_data;
-            data[x][y].y = y_data;
-            data[x][y].z = 0.0f;
+                // Calcul des vecteurs associes a la position
+                float x_vecteur = Vex(x_data, y_data, alpha, delta);
+                float y_vecteur = Vey(x_data, y_data, alpha, delta);
+
+                std::cout << "next_x : " << next_x << " | next_y : " << next_y << std::endl;
+                std::cout << "x_data : " << x_data << " | y_data : " << y_data << std::endl;
+                std::cout << "Vex : " << x_vecteur << " | Vey : " << y_vecteur << std::endl;
+                std::cout << "" << std::endl;
+
+                // Memorisation des donnees
+                data[next_x][next_y].x = x_data;
+                data[next_x][next_y].y = y_data;
+                data[next_x][next_y].z = 0.0f;
+
+                // Mise a jour du point courant
+                next_x += x_vecteur;
+                next_y += y_vecteur;
+            }
         }
     }
 
