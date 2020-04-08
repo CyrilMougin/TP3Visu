@@ -6,7 +6,7 @@
 using namespace std;
 
 void construct_points(float pasEchantillonage);
-void setNewDatas(int sample);
+void setNewDatas(int sample, double alpha);
 
 double function_calc(double x, double y);
 double Gradx(double x, double y, double delta);
@@ -120,11 +120,15 @@ int main()
     glUniform1f(id_scale_x, scale_x);
 
     // Nombre d'echantillons
-    int sample = 100;
+    int sample = 200;
+
+    // Angle alpha
+    double alpha = M_PI / 2;
 
     // Ajuster le nombre d'echantillons
     int input_ch;
-    int step_sample = 2;
+    int step_sample = 10;
+    double step_alpha = 0.125;
 
     // render loop
     // -----------
@@ -135,15 +139,18 @@ int main()
 
         if (input_ch == 1) {
             sample += step_sample;
+            //alpha += step_alpha;
+
         }
         if (input_ch == 2) {
             sample -= step_sample;
+            //alpha -= step_alpha;
         }
 
-        std::cout << "Nombre d'echantillons : " << sample << std::endl;
+        std::cout << "Nombre d'echantillons : " << sample << " | Angle alpha : " << alpha << std::endl;
 
         // Actualiser les donnees
-        setNewDatas(sample);
+        setNewDatas(sample, alpha);
 
         // render
         // ------
@@ -257,24 +264,21 @@ double norme_vecteur(double vex, double vey) {
     return sqrt(pow(vex, 2) + pow(vey, 2));
 }
 
-void setNewDatas(int sample) {
-
+void setNewDatas(int sample, double alpha) {
+    //std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << std::endl;
     int x = 0;
     int y = 0;
-    int next_x;
-    int next_y;
+    int next_x = 0;
+    int next_y = 0;
     double delta = 0.0001;
-    double alpha = M_PI / 2;
     double coeff = 0.1;
 
     Data data[sample][sample];
- 
-    //for (int x = 0; x < sample; x += 1) {
-    //    for (int y = 0; y < sample; y += 1) {
-    for (int i = 0; i < 10; i += 1) {
-        for (int j = 0; j < 10; j += 1) {           
-            x = 0;
-            y += 1;
+
+    for (int i = 0; i < sample/10; i += 1) {
+        y = 0;
+
+        for (int j = 0; j < sample/10; j += 1) {             
 
             // Conversion de l'ensemble {0, sample} a l'ensemble {-5, 5}
             double x_data = (i * 10 - 0.5 * (double)sample) / (0.1 * (double)sample);
@@ -288,7 +292,6 @@ void setNewDatas(int sample) {
 
             //std::cout << "########## Nouvelle ligne de courant ##########" << std::endl;
             
-            //std::cout << "##### Ligne de courant #####" << std::endl;
             for (int k = 0; k < 10; k++) {
 
                 // Calcul des vecteurs associes a la position
@@ -313,12 +316,14 @@ void setNewDatas(int sample) {
                 data[x][y].z = 0.0f;
 
                 // On actualise les donnees
-                x += 1;
+                y += 1;
+                
                 x_data = new_x_data;
                 y_data = new_y_data;
             
-            }
+            }          
         }
+        x += 1;
     }
 
     glGenVertexArrays(1, &VAO);
