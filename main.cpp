@@ -8,11 +8,11 @@ using namespace std;
 void construct_points(float pasEchantillonage);
 void setNewDatas(int sample);
 
-float function_calc(float x, float y);
-float Gradx(float x, float y, float delta);
-float Grady(float x, float y, float delta);
-float Vex(float x, float y, float alpha, float delta);
-float Vey(float x, float y, float alpha, float delta);
+double function_calc(double x, double y);
+double Gradx(double x, double y, double delta);
+double Grady(double x, double y, double delta);
+double Vex(double x, double y, double alpha, double delta);
+double Vey(double x, double y, double alpha, double delta);
 
 float i;
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -120,11 +120,11 @@ int main()
     glUniform1f(id_scale_x, scale_x);
 
     // Nombre d'echantillons
-    int sample = 1;
+    int sample = 100;
 
     // Ajuster le nombre d'echantillons
     int input_ch;
-    int step_sample = 10;
+    int step_sample = 2;
 
     // render loop
     // -----------
@@ -153,7 +153,7 @@ int main()
 
         // draw our first triangle
         glUseProgram(shaderProgram);
-        
+        glPointSize(1);
 
         glBindVertexArray(VAO);
         glDrawArrays(GL_POINTS, 0, 1000000);
@@ -233,80 +233,90 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     glViewport(0, 0, width, height);
 }
 
-float function_calc(float x, float y){
+double function_calc(double x, double y){
     return 8 * exp(-((pow(x, 2) + pow(y, 2)) / 5)) * 100;
 }
 
-float Gradx(float x, float y, float delta) {
+double Gradx(double x, double y, double delta) {
     return (function_calc(x + delta, y) - function_calc(x, y)) / delta;
 }
 
-float Grady(float x, float y, float delta) {
+double Grady(double x, double y, double delta) {
     return (function_calc(x, y + delta) - function_calc(x, y)) / delta;
 }
 
-float Vex(float x, float y, float alpha, float delta) {
+double Vex(double x, double y, double alpha, double delta) {
     return cos(alpha) * Gradx(x, y, delta) - sin(alpha) * Grady(x, y, delta);
 }
 
-float Vey(float x, float y, float alpha, float delta) {
+double Vey(double x, double y, double alpha, double delta) {
     return sin(alpha) * Gradx(x, y, delta) - cos(alpha) * Grady(x, y, delta);
 }
 
-float norme_vecteur(float vex, float vey) {
+double norme_vecteur(double vex, double vey) {
     return sqrt(pow(vex, 2) + pow(vey, 2));
 }
 
 void setNewDatas(int sample) {
 
+    int x = 0;
+    int y = 0;
     int next_x;
     int next_y;
-    float delta = 0.75;
-    float alpha = M_PI / 2;
+    double delta = 0.0001;
+    double alpha = M_PI / 2;
+    double coeff = 0.1;
 
     Data data[sample][sample];
+ 
+    //for (int x = 0; x < sample; x += 1) {
+    //    for (int y = 0; y < sample; y += 1) {
+    for (int i = 0; i < 10; i += 1) {
+        for (int j = 0; j < 10; j += 1) {           
+            x = 0;
+            y += 1;
 
-    for (int x = 0; x <= sample ; x += 1) {
-        for (int y = 0; y <= sample; y += 1) {
-            
             // Conversion de l'ensemble {0, sample} a l'ensemble {-5, 5}
-            float x_data = (x - 0.5 * (float)sample) / (0.1 * (float)sample);
-            float y_data = (y - 0.5 * (float)sample) / (0.1 * (float)sample);
+            double x_data = (i * 10 - 0.5 * (double)sample) / (0.1 * (double)sample);
+            double y_data = (j * 10 - 0.5 * (double)sample) / (0.1 * (double)sample);
             //float z_data = function_calc(x_data, y_data);
+
+            // On stocke les sources dans la matrice
+            data[x][y].x = x_data;
+            data[x][y].y = y_data;
+            data[x][y].z = 0.0f;
+
+            //std::cout << "########## Nouvelle ligne de courant ##########" << std::endl;
             
-            next_x = x_data;
-            next_y = y_data;
+            //std::cout << "##### Ligne de courant #####" << std::endl;
+            for (int k = 0; k < 10; k++) {
+
+                // Calcul des vecteurs associes a la position
+                double x_vecteur = Vex(x_data, y_data, alpha, delta);
+                double y_vecteur = Vey(x_data, y_data, alpha, delta);
+
+                // Normalisation du vecteur
+                double norme = norme_vecteur(x_vecteur, y_vecteur);
+                x_vecteur /= norme;
+                y_vecteur /= norme;
+
+                // Mise a jour du point courant
+                double new_x_data = x_data + coeff * x_vecteur;
+                double new_y_data = y_data + coeff * y_vecteur;
+                
+                //std::cout << "coord : " << x << " ; " << y << " | data : " << new_x_data << " ; " << new_y_data << std::endl; 
+                //std::cout << "Vex : " << x_vecteur << " | Vey : " << y_vecteur << std::endl;
+
+                // On stocke chaque point de la courbe dans la matrice
+                data[x][y].x = new_x_data;
+                data[x][y].y = new_y_data;
+                data[x][y].z = 0.0f;
+
+                // On actualise les donnees
+                x += 1;
+                x_data = new_x_data;
+                y_data = new_y_data;
             
-            for (int i = 0; i < 2; i++) {
-                if(next_x <= 5 && -5 <= next_x && next_y <= 5 && -5 <= next_y) {
-                    // Calcul des vecteurs associes a la position
-                    float x_vecteur = Vex(next_x, next_y, alpha, delta);
-                    float y_vecteur = Vey(next_x, next_y, alpha, delta);
-                    float x_grad = Gradx(next_x, next_y, delta);
-                    float y_grad = Grady(next_x, next_y, delta);
-
-                    //std::cout << "Vex : " << x_vecteur << " | Vey : " << y_vecteur << std::endl;
-
-                    float norme = norme_vecteur(x_vecteur, y_vecteur);
-                    x_vecteur /= norme;
-                    y_vecteur /= norme;
-
-                    std::cout << "next_x : " << next_x << " | next_y : " << next_y << std::endl;
-                    std::cout << "x_data : " << x_data << " | y_data : " << y_data << std::endl;
-                    std::cout << "Vex : " << x_vecteur << " | Vey : " << y_vecteur << std::endl;
-                    //std::cout << "Gradx : " << x_grad << " | Grady : " << y_grad << std::endl;
-                    std::cout << "" << std::endl;
-
-                    // Memorisation des donnees 
-                    // A MODIFIER -- IL FAUT RECONVERTIR next_x ET next_y
-                    data[next_x][next_y].x = next_x;
-                    data[next_x][next_y].y = next_y;
-                    data[next_x][next_y].z = 0.0f;
-
-                    // Mise a jour du point courant
-                    next_x += (x_vecteur * 10);
-                    next_y += (y_vecteur * 10);
-                }
             }
         }
     }
