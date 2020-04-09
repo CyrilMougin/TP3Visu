@@ -6,7 +6,9 @@
 using namespace std;
 
 void construct_points(float pasEchantillonage);
-void setNewDatas(int sample, double alpha);
+
+void setNewDatas_source(int sample);
+void setNewDatas_powerline(int sample, double alpha, int number_point);
 
 double function_calc(double x, double y);
 double Gradx(double x, double y, double delta);
@@ -28,6 +30,11 @@ GLint uniform_scale_x;
 
 const float scale_x = 5.;
 
+bool s_is_press = false;
+bool S_is_press = false;
+bool mod = false;
+bool a_is_press = false;
+bool space_is_press = false;
 bool add_is_press = false;
 bool subtract_is_press = false;
 
@@ -125,32 +132,62 @@ int main()
     // Angle alpha
     double alpha = M_PI / 2;
 
+    // Nombre de points pour les lignes de courant
+    int number_point = 5;
+
+    // Point de vue
+    int view = 0;
+
     // Ajuster le nombre d'echantillons
     int input_ch;
     int step_sample = 10;
-    double step_alpha = 0.125;
+    double step_alpha = M_PI / 5;
+    int step_point = 1;
 
     // render loop
     // -----------
-    while (!glfwWindowShouldClose(window))
-    {
+    while (!glfwWindowShouldClose(window)) {
         // Input
         input_ch = processInput(window);
 
         if (input_ch == 1) {
-            sample += step_sample;
-            //alpha += step_alpha;
+            number_point += step_point;
 
         }
         if (input_ch == 2) {
+            number_point -= step_point;
+            
+        }
+        if (input_ch == 3) {
+            sample += step_sample;
+
+        }
+        if (input_ch == 4) {
             sample -= step_sample;
-            //alpha -= step_alpha;
+
+        }
+        if (input_ch == 5) {
+            alpha += step_alpha; 
         }
 
-        std::cout << "Nombre d'echantillons : " << sample << " | Angle alpha : " << alpha << std::endl;
+        std::cout << "Nb echantillons : " << sample << " | Angle : " << alpha <<  " | Nb points : " << number_point << std::endl;
 
         // Actualiser les donnees
-        setNewDatas(sample, alpha);
+        if (input_ch == 6) {
+            if (view < 3) {
+                view += 1;
+            }else {
+                view = 0;
+            }
+        }
+
+        if (view == 0) {
+            setNewDatas_source(sample);
+        }else if (view == 1) {
+            setNewDatas_powerline(sample, alpha, number_point);
+        }else {
+            // A FAIRE
+        }
 
         // render
         // ------
@@ -193,8 +230,7 @@ int processInput(GLFWwindow* window) {
     
     // Fermer la fenetre
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-        glfwSetWindowShouldClose(window, true);
-       
+        glfwSetWindowShouldClose(window, true);   
         return -1;
     }
 
@@ -202,31 +238,92 @@ int processInput(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_KP_ADD) == GLFW_RELEASE && add_is_press) {
         std::cout << "Ca release add" << std::endl;
         add_is_press = false;
-
     }
 
     if (glfwGetKey(window, GLFW_KEY_KP_SUBTRACT) == GLFW_RELEASE && subtract_is_press) {
         std::cout << "Ca release subtract" << std::endl;
         subtract_is_press = false;
-
     }
 
     // 'Bloquer' les touches '+' et '-' & Envoie du signal
     if (glfwGetKey(window, GLFW_KEY_KP_ADD) == GLFW_PRESS && !add_is_press) {
         // Cas du '+'
-        std::cout << "C'est plus" << std::endl;
+        std::cout << "C'est plus 'add'" << std::endl;
         add_is_press = true;
-
         return 1;
     }
 
     if (glfwGetKey(window, GLFW_KEY_KP_SUBTRACT) == GLFW_PRESS && !subtract_is_press) {
         // Cas du '-'
-        std::cout << "C'est moins" << std::endl;
+        std::cout << "C'est moins 'subtract'" << std::endl;
         subtract_is_press = true;
-
         return 2;
     }
+
+    // Detecter si une des touches 'LEFT_SHIFT', 'RIGHT_SHIFT' ou 'CAPS_LOCK' est enfonce
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_CAPS_LOCK) == GLFW_PRESS) {
+        mod = true;
+    }else {
+        mod = false;
+    }
+
+    // 'Debloquer' les touches 's' et 'S'
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_RELEASE && S_is_press) {
+        if (mod) {
+            std::cout << "Ca release 'S'" << std::endl;
+            S_is_press = false;   
+        }
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_RELEASE && s_is_press) {
+        if (!mod) {
+            std::cout << "Ca release 's'" << std::endl;
+            s_is_press = false;
+        }
+    }
+
+    // 'Bloquer' les touches 's' et 'S' & Envoie du signal
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS && !S_is_press) {
+        if (mod) {
+            std::cout << "C'est plus 'S'" << std::endl;
+            S_is_press = true;
+            return 3; 
+        }
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS && !s_is_press) {
+        if (!mod) {
+            std::cout << "C'est moins 's'" << std::endl;
+            s_is_press = true;
+            return 4;
+        }
+    }
+
+    // 'Debloquer' la touche 'a'
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_RELEASE && a_is_press) {
+        std::cout << "Ca release 'a'" << std::endl;
+        a_is_press = false;
+    }
+
+    // 'Bloquer' la touche 'a' & Envoie du signal
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS && !a_is_press) {
+        std::cout << "C'est plus 'a'" << std::endl;
+        a_is_press = true;
+        return 5;
+    }
+
+    // 'Debloquer' la touche 'space'
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_RELEASE && space_is_press) {
+        std::cout << "Ca release 'space'" << std::endl;
+        space_is_press = false;
+    }
+
+    // 'Bloquer' la touche 'space' & Envoie du signal
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !space_is_press) {
+        std::cout << "C'est plus 'space'" << std::endl;
+        space_is_press = true;
+        return 6;
+    }    
 
     return 0;
 }
@@ -264,7 +361,56 @@ double norme_vecteur(double vex, double vey) {
     return sqrt(pow(vex, 2) + pow(vey, 2));
 }
 
-void setNewDatas(int sample, double alpha) {
+void setNewDatas_source(int sample) {
+    int x = 0;
+    int y = 0;
+
+    Data data[sample][sample];
+
+    for (int i = 0; i < sample/10; i += 1) {
+        y = 0;
+
+        for (int j = 0; j < sample/10; j += 1) {
+
+            // Conversion de l'ensemble {0, sample} a l'ensemble {-5, 5}
+            double x_data = (i * 10 - 0.5 * (double)sample) / (0.1 * (double)sample);
+            double y_data = (j * 10 - 0.5 * (double)sample) / (0.1 * (double)sample);
+            //float z_data = function_calc(x_data, y_data);
+
+            // On stocke les sources dans la matrice
+            data[x][y].x = x_data;
+            data[x][y].y = y_data;
+            data[x][y].z = 0.0f;
+
+            // On actualise les donnees
+            y += 1;
+        
+        }
+        x += 1;
+    }
+
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &VBO_colors);
+
+    glBindVertexArray(VAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(data), data, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_colors);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+   
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);  
+
+    glBindVertexArray(0);
+}
+
+void setNewDatas_powerline(int sample, double alpha, int number_point) {
     //std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << std::endl;
     int x = 0;
     int y = 0;
@@ -292,7 +438,7 @@ void setNewDatas(int sample, double alpha) {
 
             //std::cout << "########## Nouvelle ligne de courant ##########" << std::endl;
             
-            for (int k = 0; k < 10; k++) {
+            for (int k = 0; k < number_point; k++) {
 
                 // Calcul des vecteurs associes a la position
                 double x_vecteur = Vex(x_data, y_data, alpha, delta);
