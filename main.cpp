@@ -47,7 +47,7 @@ typedef struct
     GLfloat x, y, z;
 } Data;
 
-unsigned int VBO,VBO_colors, VAO;
+unsigned int VBO,VBO_colors, VAO, vec_1_VAO, vec_2_VAO;
 
 
 const char* vertexShaderSource = "#version 330 core\n"
@@ -128,15 +128,15 @@ int main()
     glUniform1f(id_scale_x, scale_x);
 
     // Nombre d'echantillons
-    int sample = 10;
+    int sample = 21;
     int step_sample = 2;
 
     // Angle alpha
-    double alpha = M_PI / 2;
-    double step_alpha = M_PI / 5;
+    double alpha = M_PI / 5;
+    double step_alpha = M_PI / 4;
 
     // Nombre de points pour les lignes de courant
-    int number_point = 5;
+    int number_point = 10;
     int step_point = 1;
 
     // Point de vue
@@ -202,9 +202,6 @@ int main()
     glfwTerminate();
     return 0;
 }
-
-
-
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
@@ -412,14 +409,16 @@ void setRender_line(int sample, double alpha, int number_point, int shaderProgra
     glDrawArrays(GL_POINTS, 0, 10000);
 
     glDisableVertexAttribArray(0);
-    /**
+    
     setNewDatas_powerline(sample, alpha, number_point);
 
     glBindVertexArray(VAO);
-    glDrawArrays(GL_POINTS, 0, 10000);
+    for(int i=0; i < 10000; i+=number_point) {
+        glDrawArrays(GL_LINE_STRIP, i, number_point);
+    }
 
     glDisableVertexAttribArray(0);
-    */
+
     // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
     // -------------------------------------------------------------------------------
     glfwSwapBuffers(window);
