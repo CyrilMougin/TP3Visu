@@ -48,16 +48,13 @@ unsigned int VBO,VBO_colors, VAO;
 
 const char* vertexShaderSource = "#version 330 core\n"
 "layout (location = 0) in vec3 aPos;\n"
-"layout (location = 1) in vec3 aColor;\n"
 
 "uniform float offset_x;\n"
 "uniform float scale_x;\n"
-"out vec3 color;\n"
 
 "void main()\n"
 "{\n"
 "   gl_Position = vec4((aPos.x + 0.0f) / scale_x, (aPos.y + 0.0f) / scale_x, aPos.z, 1.0);\n"
-"   color = aColor;\n"
 
 "}\0";
 
@@ -127,22 +124,22 @@ int main()
     glUniform1f(id_scale_x, scale_x);
 
     // Nombre d'echantillons
-    int sample = 200;
+    int sample = 10;
+    int step_sample = 2;
 
     // Angle alpha
     double alpha = M_PI / 2;
+    double step_alpha = M_PI / 5;
 
     // Nombre de points pour les lignes de courant
     int number_point = 5;
+    int step_point = 1;
 
     // Point de vue
     int view = 0;
 
-    // Ajuster le nombre d'echantillons
+    // Ajuster les différents paramètres
     int input_ch;
-    int step_sample = 10;
-    double step_alpha = M_PI / 5;
-    int step_point = 1;
 
     // render loop
     // -----------
@@ -170,11 +167,11 @@ int main()
             alpha += step_alpha; 
         }
 
-        std::cout << "Nb echantillons : " << sample << " | Angle : " << alpha <<  " | Nb points : " << number_point << std::endl;
+        std::cout << "Nb echantillons : " << sample << " | Angle : " << alpha <<  " | Nb points : " << number_point << " | Mode : " << view << std::endl;
 
         // Actualiser les donnees
         if (input_ch == 6) {
-            if (view < 3) {
+            if (view < 2) {
                 view += 1;
             }else {
                 view = 0;
@@ -201,6 +198,8 @@ int main()
 
         glBindVertexArray(VAO);
         glDrawArrays(GL_POINTS, 0, 1000000);
+
+        glDisableVertexAttribArray(0);
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
@@ -367,14 +366,14 @@ void setNewDatas_source(int sample) {
 
     Data data[sample][sample];
 
-    for (int i = 0; i < sample/10; i += 1) {
+    for (int i = 0; i < sample; i += 1) {
         y = 0;
 
-        for (int j = 0; j < sample/10; j += 1) {
+        for (int j = 0; j < sample; j += 1) {
 
             // Conversion de l'ensemble {0, sample} a l'ensemble {-5, 5}
-            double x_data = (i * 10 - 0.5 * (double)sample) / (0.1 * (double)sample);
-            double y_data = (j * 10 - 0.5 * (double)sample) / (0.1 * (double)sample);
+            double x_data = (i - 0.5 * (double)sample) / (0.1 * (double)sample);
+            double y_data = (j - 0.5 * (double)sample) / (0.1 * (double)sample);
             //float z_data = function_calc(x_data, y_data);
 
             // On stocke les sources dans la matrice
@@ -387,27 +386,24 @@ void setNewDatas_source(int sample) {
         
         }
         x += 1;
-    }
+    } 
 
     glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &VBO_colors);
 
     glBindVertexArray(VAO);
 
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    GLuint sourcebuffer;
+	glGenBuffers(1, &sourcebuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, sourcebuffer);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(data), data, GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO_colors);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(data), data, GL_STATIC_DRAW);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
-   
+
     glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);  
 
     glBindVertexArray(0);
+
 }
 
 void setNewDatas_powerline(int sample, double alpha, int number_point) {
@@ -419,16 +415,16 @@ void setNewDatas_powerline(int sample, double alpha, int number_point) {
     double delta = 0.0001;
     double coeff = 0.1;
 
-    Data data[sample][sample];
+    Data data[sample][sample * number_point];
 
-    for (int i = 0; i < sample/10; i += 1) {
+    for (int i = 0; i < sample; i += 1) {
         y = 0;
 
-        for (int j = 0; j < sample/10; j += 1) {             
+        for (int j = 0; j < sample; j += 1) {             
 
             // Conversion de l'ensemble {0, sample} a l'ensemble {-5, 5}
-            double x_data = (i * 10 - 0.5 * (double)sample) / (0.1 * (double)sample);
-            double y_data = (j * 10 - 0.5 * (double)sample) / (0.1 * (double)sample);
+            double x_data = (i - 0.5 * (double)sample) / (0.1 * (double)sample);
+            double y_data = (j - 0.5 * (double)sample) / (0.1 * (double)sample);
             //float z_data = function_calc(x_data, y_data);
 
             // On stocke les sources dans la matrice
@@ -473,22 +469,18 @@ void setNewDatas_powerline(int sample, double alpha, int number_point) {
     }
 
     glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &VBO_colors);
 
     glBindVertexArray(VAO);
 
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    GLuint powerlinebuffer;
+	glGenBuffers(1, &powerlinebuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, powerlinebuffer);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(data), data, GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO_colors);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(data), data, GL_STATIC_DRAW);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
-   
+
     glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);  
 
     glBindVertexArray(0);
 
