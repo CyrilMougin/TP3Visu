@@ -7,6 +7,10 @@ using namespace std;
 
 void construct_points(float pasEchantillonage);
 
+void setRender_source(int sample, int shaderProgram, GLFWwindow* window);
+void setRender_powerline(int sample, double alpha, int number_point, int shaderProgram, GLFWwindow* window);
+void setRender_line(int sample, double alpha, int number_point, int shaderProgram, GLFWwindow* window);
+
 void setNewDatas_source(int sample);
 void setNewDatas_powerline(int sample, double alpha, int number_point);
 
@@ -179,34 +183,13 @@ int main()
         }
 
         if (view == 0) {
-            setNewDatas_source(sample);
+            setRender_source(sample, shaderProgram, window);
         }else if (view == 1) {
-            setNewDatas_powerline(sample, alpha, number_point);
+            setRender_powerline(sample, alpha, number_point, shaderProgram, window);
         }else {
-            // A FAIRE
+            setRender_line(sample, alpha, number_point, shaderProgram, window);
         }
 
-        // render
-        // ------
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-
-        // draw our first triangle
-        glUseProgram(shaderProgram);
-        glPointSize(1);
-
-        glBindVertexArray(VAO);
-        glDrawArrays(GL_POINTS, 0, 1000000);
-
-        glDisableVertexAttribArray(0);
-
-        // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-        // -------------------------------------------------------------------------------
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-
-        //break;
     }
 
     // optional: de-allocate all resources once they've outlived their purpose:
@@ -360,6 +343,89 @@ double norme_vecteur(double vex, double vey) {
     return sqrt(pow(vex, 2) + pow(vey, 2));
 }
 
+void setRender_source(int sample, int shaderProgram, GLFWwindow* window) {
+    // render
+    // ------
+    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    // draw our first triangle
+    glUseProgram(shaderProgram);
+    glPointSize(1);
+
+    setNewDatas_source(sample);
+
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_POINTS, 0, 10000);
+
+    glDisableVertexAttribArray(0);
+
+    // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+    // -------------------------------------------------------------------------------
+    glfwSwapBuffers(window);
+    glfwPollEvents();
+}
+
+void setRender_powerline(int sample, double alpha, int number_point, int shaderProgram, GLFWwindow* window) {  
+    // render
+    // ------
+    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    // draw our first triangle
+    glUseProgram(shaderProgram);
+    glPointSize(1);
+
+    setNewDatas_source(sample);
+
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_POINTS, 0, 10000);
+
+    glDisableVertexAttribArray(0);
+
+    setNewDatas_powerline(sample, alpha, number_point);
+
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_POINTS, 0, 10000);
+
+    glDisableVertexAttribArray(0);
+
+    // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+    // -------------------------------------------------------------------------------
+    glfwSwapBuffers(window);
+    glfwPollEvents();
+}
+
+void setRender_line(int sample, double alpha, int number_point, int shaderProgram, GLFWwindow* window) {
+        // render
+    // ------
+    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    // draw our first triangle
+    glUseProgram(shaderProgram);
+    glPointSize(1);
+
+    setNewDatas_source(sample);
+
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_POINTS, 0, 10000);
+
+    glDisableVertexAttribArray(0);
+    /**
+    setNewDatas_powerline(sample, alpha, number_point);
+
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_POINTS, 0, 10000);
+
+    glDisableVertexAttribArray(0);
+    */
+    // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+    // -------------------------------------------------------------------------------
+    glfwSwapBuffers(window);
+    glfwPollEvents();
+}
+
 void setNewDatas_source(int sample) {
     int x = 0;
     int y = 0;
@@ -403,15 +469,14 @@ void setNewDatas_source(int sample) {
     glEnableVertexAttribArray(0);
 
     glBindVertexArray(0);
-
 }
 
 void setNewDatas_powerline(int sample, double alpha, int number_point) {
-    //std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << std::endl;
     int x = 0;
     int y = 0;
     int next_x = 0;
     int next_y = 0;
+
     double delta = 0.0001;
     double coeff = 0.1;
 
@@ -426,13 +491,6 @@ void setNewDatas_powerline(int sample, double alpha, int number_point) {
             double x_data = (i - 0.5 * (double)sample) / (0.1 * (double)sample);
             double y_data = (j - 0.5 * (double)sample) / (0.1 * (double)sample);
             //float z_data = function_calc(x_data, y_data);
-
-            // On stocke les sources dans la matrice
-            data[x][y].x = x_data;
-            data[x][y].y = y_data;
-            data[x][y].z = 0.0f;
-
-            //std::cout << "########## Nouvelle ligne de courant ##########" << std::endl;
             
             for (int k = 0; k < number_point; k++) {
 
@@ -448,9 +506,6 @@ void setNewDatas_powerline(int sample, double alpha, int number_point) {
                 // Mise a jour du point courant
                 double new_x_data = x_data + coeff * x_vecteur;
                 double new_y_data = y_data + coeff * y_vecteur;
-                
-                //std::cout << "coord : " << x << " ; " << y << " | data : " << new_x_data << " ; " << new_y_data << std::endl; 
-                //std::cout << "Vex : " << x_vecteur << " | Vey : " << y_vecteur << std::endl;
 
                 // On stocke chaque point de la courbe dans la matrice
                 data[x][y].x = new_x_data;
@@ -483,5 +538,4 @@ void setNewDatas_powerline(int sample, double alpha, int number_point) {
     glEnableVertexAttribArray(0);
 
     glBindVertexArray(0);
-
 }
